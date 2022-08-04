@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: mongoDBTest
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: mongoDBTest
+  Stage:
+    Type: String
+    Default: dev
+
+Globals:
+  Function:
+    Runtime: nodejs16.x
+    Timeout: 20
+    Environment:
+      Variables:
+        MDB_String: 'mongodb+srv://syed:M98ssh6xxFTtXWVp@cluster0.masxk.mongodb.net/?retryWrites=true&w=majority'
+
+Resources:
+  MainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: app.lambdahandler
+
+  MainAPIGateWay:
+    Type: AWS::ApiGateway::RestApi
+    DependsOn: MainFunction
+    Properties:
+      Name: !Ref ProjectName
+  #==========permission for trigger
+  MainAPIGateWayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref MainFunction
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MainAPIGateWay}/*/*"
+  #===========Resources
+  APIGateWayResorce1:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      PathPart: hello  #!Ref PathPart 
+      RestApiId: !Ref MainAPIGateWay
+      ParentId: !GetAtt
+        - MainAPIGateWay
+        - RootResourceId
+    
+  #===========methods
+  APIGateWayMethod1:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref MainAPIGateWay
+      ResourceId: !Ref APIGateWayResorce1
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS_PROXY"
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - >-
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFuncNameArn}/invocations
+          - LambdaFuncNameArn: !GetAtt [MainFunction, Arn]
+        IntegrationResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+            #   method.response.header.Access-Control-Allow-Origin: "'*'"
+            #   method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+  #=========Deployment
+  APIGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref MainAPIGateWay
+      StageName: !Ref Stage
+    DependsOn: 
+      - APIGateWayMethod1
+      - MainAPIGateWayInvoke
+
+#=======
+Outputs:
+  API:
+    Value: !Join ['',['https://',!Ref MainAPIGateWay,'.execute-api.',!Ref AWS::Region,'.amazonaws.com/',!Ref Stage,'/hello/']]
+
