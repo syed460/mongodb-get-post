@@ -16,7 +16,7 @@ Globals:
     Timeout: 20
     Environment:
       Variables:
-        MDB_String: 'mongodb+srv://syed:M98ssh6xxFTtXWVp@cluster0.masxk.mongodb.net/?retryWrites=true&w=majority'
+        MDB_String: '??'
 
 Resources:
   MainFunction:
