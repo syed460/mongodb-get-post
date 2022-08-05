@@ -1,5 +1,6 @@
 'use strict'
 const MongoClient = require("mongodb").MongoClient
+const { dbUser } = require('../ssmGetCreden')
 
 let cachedDb = null;
 
@@ -8,7 +9,19 @@ module.exports.connectToDatabase = async () => {
         console.log("Use existing connection")
         return Promise.resolve(cachedDb)
     }else {
-        console.log(process.env.MDB_String)
+        const result = await dbUser()
+        let data ={username: '', password: ''};
+        for (const element of result.Parameters){
+            // console.log(element)
+            if (result.Parameters.Name === '/mongodb/dev/password'){
+                data.password = result.Parameters.Value
+            }else if (result.Parameters.Name === '/mongodb/dev/username'){
+                data.username = result.Parameters.Value
+            }
+        }
+
+        let uri = "mongodb+srv://" + data.username + ":" + 'test'+'@cluster0.masxk.mongodb.net/?retryWrites=true&w=majority'
+        console.log(uri)
         return MongoClient.connect(process.env.MDB_String, {
             useNewUrlParser: true,
             useUnifiedTopology: true
@@ -24,4 +37,6 @@ module.exports.connectToDatabase = async () => {
         })
     }
 }
+
+
 

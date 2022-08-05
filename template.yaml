@@ -16,8 +16,8 @@ Globals:
     Timeout: 20
     Environment:
       Variables:
-        MDB_String: '??'
-
+        mongodbUsername: !Join ['',[/mongodb/, !Ref Stage ,/username]] # Note
+        mongodbPassword: !Join ['', [/mongodb/, !Ref Stage ,/password]]
 Resources:
   MainFunction:
     Type: AWS::Serverless::Function
@@ -55,6 +55,25 @@ Resources:
       RestApiId: !Ref MainAPIGateWay
       ResourceId: !Ref APIGateWayResorce1
       HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: "AWS_PROXY"
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - >-
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFuncNameArn}/invocations
+          - LambdaFuncNameArn: !GetAtt [MainFunction, Arn]
+        IntegrationResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+            #   method.response.header.Access-Control-Allow-Origin: "'*'"
+            #   method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+  APIGateWayMethod2:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref MainAPIGateWay
+      ResourceId: !Ref APIGateWayResorce1
+      HttpMethod: POST
       AuthorizationType: NONE
       Integration:
         Type: "AWS_PROXY"
